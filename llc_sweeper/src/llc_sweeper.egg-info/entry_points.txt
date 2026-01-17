@@ -1,0 +1,2 @@
+[console_scripts]
+llc-sweeper = llc_sweeper.cli:main

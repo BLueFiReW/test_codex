@@ -1,0 +1,230 @@
+import numpy as np
+from typing import List
+
+def calculate_n(Vin: float, Vout: float) -> tuple[float, int]:
+    """
+    Step 2: Transformer turns ratio.
+    Eq (1): n = Vin / (2 * Vout * G_resonant)
+    At resonance, G = 1.
+    
+    Returns:
+        n_float: calculated value
+        n_used: integer rounded value (half-up)
+    """
+    n_float = Vin / (2 * Vout)
+    n_used = int(n_float + 0.5)
+    return n_float, n_used
+
+def calculate_Lm_max(t_dead: float, Coss: float, fsw_min: float) -> float:
+    """
+    Step 3: Maximum magnetizing inductance for ZVS.
+    Eq (2): t_sw_min = 1 / (3 * fsw_start_up) approx 1 / (3 * fsw_min) -> Article says tSW_MIN = 1/fSTART_UP
+    Article Eq (3): LM_MAX = tSW_MIN * tDEAD_MAX / (16 * COSS)
+    
+    Warning: Article text says "fSTART_UP is usually 3 times fSW".
+    So tSW_MIN term represents the period at max frequency (start up).
+    
+    The article formula is:
+    LM_MAX = (t_dead * T_min) / (16 * Coss)
+    """
+    # Assuming f_start_up = 3 * fsw_min (typical soft start)
+    # The article actually uses fsw_min in the example calculation to derive Lm_max?
+    # No, in Step 3 it says "fSTART_UP... approximately 3 x fSW".
+    # And "tSW_MIN = 1 / fSTART_UP".
+    
+    # Example Article: f_sw = 100k. f_start = 300k. t_sw_min = 3.33us.
+    # Lm_max = 3.33us * 2us / (16 * 80pF) = 5.2 mH.
+    
+    f_startup = 3 * fsw_min
+    t_sw_min = 1.0 / f_startup
+    lm_max = (t_sw_min * t_dead) / (16 * Coss)
+    return lm_max
+
+def calculate_required_deadtime(Lm: float, Coss: float, fsw_min: float) -> float:
+    """
+    Calculate minimum required deadtime for ZVS with given Lm.
+    Derived from Eq (3): t_dead = (16 * Coss * Lm) / t_sw_min
+    t_sw_min = 1 / (3 * fsw_min) approx (Startup condition)
+    """
+    f_startup = 3 * fsw_min
+    t_sw_min = 1.0 / f_startup
+    t_dead_req = (16 * Coss * Lm) / t_sw_min
+    return t_dead_req
+
+def calculate_tank_components(
+    Vout: float, Pout: float, n: int, fR: float, Ln: float, Qe: float
+) -> tuple[float, float, float, float, float]:
+    """
+    Step 5: Resonant tank selection.
+    
+    Returns:
+        Re, Cr, Lr, Lm, Rl
+    """
+    # Eq (6)
+    Rl = (Vout**2) / Pout
+    
+    # Eq (7)
+    Re = (8 * n**2 / np.pi**2) * Rl
+    
+    # Eq (8)
+    Cr = 1 / (2 * np.pi * fR * Re * Qe)
+    
+    # Eq (9)
+    Lr = 1 / ((2 * np.pi * fR)**2 * Cr)
+    
+    # Eq (10)
+    Lm = Ln * Lr
+    
+    return Re, Cr, Lr, Lm, Rl
+
+    return Re, Cr, Lr, Lm, Rl
+
+def get_rounded_neighbors(
+    Lr: float, Cr: float, Lm: float, 
+    L_step: float = 1.0e-6, C_step: float = 1.0e-9
+) -> List[tuple[float, float, float]]:
+    """
+    Get neighbor integer-rounded components (floor and ceil).
+    Returns list of (Lr_new, Cr_new, Lm_new) tuples.
+    Step: 1uH (1e-6) and 1nF (1e-9) forces 'no decimals' in uH/nF units.
+    """
+    def get_opts(val, step):
+        d = val / step
+        lower = int(np.floor(d)) * step
+        upper = int(np.ceil(d)) * step
+        if lower == upper:
+            return [lower]
+        return [lower, upper]
+
+    Lr_opts = get_opts(Lr, L_step)
+    Cr_opts = get_opts(Cr, C_step)
+    Lm_opts = get_opts(Lm, L_step)
+    
+    import itertools
+    combinations = list(itertools.product(Lr_opts, Cr_opts, Lm_opts))
+    return combinations
+
+def recalculate_params(Lr: float, Cr: float, Re: float) -> tuple[float, float]:
+    """
+    Step 6: Recalculation after component selection.
+    Returns:
+        fR_new, Qe_new
+    """
+    # Eq (12)
+    fR_new = 1 / (2 * np.pi * np.sqrt(Lr * Cr))
+    
+    # Eq (13)
+    Qe_new = 1 / (2 * np.pi * fR_new * Re * Cr)
+    
+    return fR_new, Qe_new
+
+def gain_fha(fN: float, Ln: float, Qe: float) -> float:
+    """
+    Step 7: Tank transfer function (M_gain).
+    Eq (14):
+    M = 1 / sqrt( (1 + 1/Ln * (1 - 1/fN^2))^2 + Qe^2 * (fN - 1/fN)^2 )
+    """
+    term1 = (1 + (1/Ln) * (1 - 1/(fN**2)))**2
+    term2 = (Qe**2) * (fN - 1/fN)**2
+    gain = 1 / np.sqrt(term1 + term2)
+    return gain
+
+def required_gain(Vin: float, Vout: float, n: int) -> float:
+    """
+    Eq (16): Required gain to achieve Vout.
+    """
+    return (Vout * 2 * n) / Vin
+
+def calculate_stress(
+    Vin: float, Vout: float, Pout: float, n: int, fN: float, Lm: float, fsw: float, Lr: float
+) -> dict:
+    """
+    Step 8: Stress calculations.
+    Returns dictionary with all stress values.
+    """
+    # Eq (19) ILM_PEAK
+    # Note: Article uses Vout_reflected or Vin? 
+    # Eq 19: ILM_PEAK = (n * Vout) / (4 * fsw * Lm)
+    Ilm_peak = (n * Vout) / (4 * fsw * Lm)
+    
+    # Eq (20) ILR_RMS
+    # ILR_RMS = sqrt( ILM_RMS^2 + I_LOAD_RMS_PRI^2 )?
+    # Article: ILR_RMS = (1/sqrt(2)) * sqrt( ILM_PEAK^2 + (pi^2 / 8) * (n * Iout)^2 ) 
+    # where Iout = Pout/Vout
+    Iout = Pout / Vout
+    Ilr_rms = (1 / np.sqrt(2)) * np.sqrt(Ilm_peak**2 + ((np.pi**2)/8) * (n * Iout)**2)
+    
+    # Eq (21) ILR_PEAK
+    Ilr_peak = np.sqrt(2) * Ilr_rms
+    
+    # Eq (22) VCR_PEAK (Article calls it VCR, implies peak or max swing)
+    # VCR = Vin / 2 + (Pout / (2 * pi * fsw * Current?)) ??
+    # Article Eq 22: V_CR_PK = Vin/2 + (I_LR_PEAK / (2 * pi * fsw * Cr)) ?? 
+    # WAIT, Article Eq 22: VCR = Vin/2 + sqrt(2)*ILR_RMS / (2*pi*fsw*Cr_val)
+    # We need Cr. It wasn't passed in. But fR and Lr are related.
+    # From resonance: wR = 1/sqrt(LrCr) -> Cr = 1/(wR^2 Lr).
+    # But fsw is potentially different from fR.
+    # Let's derive Cr from Lr and resonant frequency? 
+    # Better to pass Cr in or calculating it.
+    # Let's rely on the caller to pass 'Cr' or we estimate it?
+    # Wait, stress calc usually happens AFTER tank design, so we know Cr.
+    # I will add Cr to arguments.
+    # Actually, let's use the relation: Xc = 1/(2pi fsw Cr). Vc_ac = Ilr_peak * Xc.
+    # Vcr_max = Vin/2 + Vc_ac.
+    pass 
+    
+    # ... I will implement the rest in the main function block below to capture Cr.
+    
+    return {}
+
+def calculate_stress_full(
+    Vin: float, Vout: float, Pout: float, n: int, 
+    Lm: float, Lr: float, Cr: float, fsw: float
+) -> dict:
+    """
+    Implements Eqs (19) - (28).
+    """
+    Iout = Pout / Vout
+    
+    # Eq (19)
+    Ilm_peak = (n * Vout) / (4 * fsw * Lm)
+    Ilm_rms = Ilm_peak / np.sqrt(2) # FHA assumption: Sinusoidal current in Lm? 
+    # Actually Lm current is triangular in reality, but FHA often treats components as sinusoidal.
+    # Triangular RMS is Peak/sqrt(3).
+    # Article context: "The magnetizing current iLm is triangular..." (Usually).
+    # But Eq 20 uses Ilm_peak^2 directly to add to I_load^2 (sinusoidal).
+    # Let's assume FHA (sinusoidal) for consistency with Eq 20 unless Article specified Triangular.
+    # Given Eq 20 form (sum of squares), it implies orthogonal sinusoidal components.
+    
+    # Eq (20)
+    # Reflected load current is Iout / n
+    Ilr_rms = (1 / np.sqrt(2)) * np.sqrt(Ilm_peak**2 + ((np.pi**2)/8) * (Iout / n)**2)
+    
+    # Eq (21)
+    Ilr_peak = np.sqrt(2) * Ilr_rms
+    
+    # Eq (22) - Assumption: VCR is V_CR_peak centered at Vin/2
+    Vcr_peak = (Vin / 2) + (Ilr_peak) / (2 * np.pi * fsw * Cr)
+    
+    # Secondary Currents (Rectified Sine approximation)
+    # I_sec_avg = Iout / 2 (per diode)
+    # I_sec_pk = I_sec_avg * pi = (Iout * pi) / 2
+    Id_peak = (Iout * np.pi) / 2
+    Id_rms = Id_peak / 2 # Half-sine RMS is Peak/2
+    
+    # Primary Switch Currents
+    Iq_peak = Ilr_peak
+    Iq_rms = Ilr_rms / np.sqrt(2)
+    
+    return {
+        "Ilm_peak": Ilm_peak,
+        "Ilm_rms": Ilm_rms,
+        "Ilr_rms": Ilr_rms,
+        "Ilr_peak": Ilr_peak,
+        "Vcr_peak": Vcr_peak,
+        "Iq_rms": Iq_rms,
+        "Iq_peak": Iq_peak,
+        "Id_rms": Id_rms,
+        "Id_peak": Id_peak
+    }
+

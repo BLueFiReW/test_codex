@@ -22,6 +22,9 @@ class LLCSpecs:
     Qe_min: float = 0.33
     Qe_max: float = 0.50
     
+    # Range Inputs for Span Check
+    Vin_min: float = None
+    Vin_max: float = None
     @property
     def Iout(self) -> float:
         return self.Pout / self.Vout
@@ -77,6 +80,11 @@ class SimulationResult:
     Iq_peak: float # Primary switch Peak (Q1, Q2)
     Id_rms: float # Secondary rectifier RMS (Q3, Q4)
     Id_peak: float # Secondary rectifier Peak (Q3, Q4)
+    
+    # Frequency Span Metrics
+    fsw_min_corner: float = 0.0
+    fsw_max_corner: float = 0.0
+    fsw_span_ratio: float = 1.0
     
     # Scoring
     score: float = 0.0

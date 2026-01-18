@@ -68,8 +68,13 @@ with st.sidebar:
     
     with st.expander("Input/Output", expanded=True):
         col1, col2 = st.columns(2)
-        Vin = col1.number_input("Vin (V)", value=400.0, step=10.0)
+        Vin = col1.number_input("Vin Nom (V)", value=400.0, step=10.0)
         Vout = col2.number_input("Vout (V)", value=48.0, step=1.0)
+        
+        c3, c4 = st.columns(2)
+        Vin_min = c3.number_input("Vin Min (V)", value=380.0, step=10.0)
+        Vin_max = c4.number_input("Vin Max (V)", value=420.0, step=10.0)
+        
         Pout = st.number_input("Pout (W)", value=600.0, step=50.0)
     
     with st.expander("Frequencies & Components", expanded=True):
@@ -98,8 +103,11 @@ if run_btn:
             Vin=Vin, Vout=Vout, Pout=Pout,
             fR_target=fR_target, fsw_min=fsw_min,
             Coss=Coss_pF * 1e-12, deadtime=t_dead_us * 1e-6,
+            fR_target=fR_target, fsw_min=fsw_min,
+            Coss=Coss_pF * 1e-12, deadtime=t_dead_us * 1e-6,
             Ln_min=Ln_min, Ln_max=Ln_max,
-            Qe_min=Qe_min, Qe_max=Qe_max
+            Qe_min=Qe_min, Qe_max=Qe_max,
+            Vin_min=Vin_min, Vin_max=Vin_max
         )
         
         # 2. Run
@@ -140,6 +148,8 @@ if run_btn:
                         f'<p>L<sub>r</sub> = {t.Lr*1e6:.1f} &mu;H</p>',
                         f'<p>C<sub>r</sub> = {t.Cr*1e9:.1f} nF</p>',
                         f'<p>L<sub>m</sub> = {t.Lm*1e6:.1f} &mu;H</p>',
+                        '<hr>',
+                        f'<p><b>Span:</b> {res.fsw_span_ratio:.2f}x <span style="font-size:0.8em; color:#888;">({res.fsw_min_corner/1e3:.0f}-{res.fsw_max_corner/1e3:.0f} kHz)</span></p>',
                         '<hr>',
                         f'<p><b>Stress:</b></p>',
                         f'<p>Pri RMS: {res.Ilr_rms:.2f} A</p>',
@@ -295,6 +305,7 @@ if run_btn:
                         "Input Voltage (Nominal)", "Input Voltage (Ideal Resonance)", "Output Voltage", "Output Power",
                         "Transformer Ratio (n)", "Resonant Inductor (Lr)", "Resonant Capacitor (Cr)", "Magnetizing Inductor (Lm)",
                         "Resonant Freq (fR)", "Quality Factor (Qe)", "Inductance Ratio (Ln)",
+                        "fsw Min (Corner)", "fsw Max (Corner)", "Span Ratio",
                         "Lr RMS Current", "Lm RMS Current", 
                         "Res Cap RMS Voltage (Article Eq 22)", "Res Cap Peak Voltage (Component Rating)",
                         "Required Deadtime (ZVS)",
@@ -306,6 +317,9 @@ if run_btn:
                         f"{best.tank.n_used} (ideal eps: {abs(best.tank.n_float - best.tank.n_used):.3f})", 
                         f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
                         f"{best.tank.fR_real/1e3:.2f} kHz", f"{best.tank.Qe_real:.3f}", f"{best.tank.Ln_real:.2f}",
+                        f"{best.fsw_min_corner/1e3:.1f} kHz (@ {specs.Vin_min}V, 100%)",
+                        f"{best.fsw_max_corner/1e3:.1f} kHz (@ {specs.Vin_max}V, 20%)",
+                        f"{best.fsw_span_ratio:.2f}x",
                         f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", 
                         f"{best.Vcr_rms:.2f} V", f"{best.Vcr_peak:.1f} V", 
                         f"{t_dead_req*1e6:.3f} us (Max {specs.deadtime*1e6:.1f})",
@@ -334,6 +348,8 @@ if run_btn:
                         "Lm (uH)": f"{r.tank.Lm*1e6:.1f}",
                         "fN": f"{r.fN:.3f}",
                         "fsw (kHz)": f"{r.fsw/1e3:.1f}",
+                        "fsw Max": f"{r.fsw_max_corner/1e3:.1f}",
+                        "Span (x)": f"{r.fsw_span_ratio:.2f}",
                         "Pri RMS (A)": f"{r.Ilr_rms:.2f}",
                         "Warnings": ", ".join(r.warnings) if r.warnings else "OK"
                     })

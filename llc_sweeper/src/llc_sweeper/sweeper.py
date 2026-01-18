@@ -32,12 +32,12 @@ def solve_fN(
         
     if target_gain < 1.0:
         # Above resonance
-        r_min = max(1.01, SearchRange[0])
+        r_min = max(1.001, SearchRange[0])
         r_max = max(2.2, SearchRange[1]) # Reasonable upper bound
     else:
         # Below resonance (Boost)
         r_min = max(0.4, SearchRange[0])
-        r_max = min(0.99, SearchRange[1])
+        r_max = min(0.999, SearchRange[1])
         
     # Attempt Brentq
     try:
@@ -106,6 +106,10 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
     Qe_vals = np.linspace(specs.Qe_min, specs.Qe_max, num=10) # 10 steps
     
     results = []
+
+    # Default Vin range if not provided
+    if specs.Vin_min is None: specs.Vin_min = specs.Vin
+    if specs.Vin_max is None: specs.Vin_max = specs.Vin
     
     for Ln in Ln_vals:
         for Qe in Qe_vals:
@@ -152,6 +156,36 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                 )
                 
                 # Result Object
+                # --- Frequency Span Check (New Feature) ---
+                # A) fsw_min_corner at (Vin_min, 100% Load)
+                G_req_min = specs.Vout * n_used / specs.Vin_min
+                fN_min = solve_fN(G_req_min, Ln_real, Qe_real)
+                
+                # B) fsw_max_corner at (Vin_max, 20% Load)
+                # Qe_light = Qe_real * 0.2 (R_load increases x5 -> Q decreases x5)
+                # Note: Q = sqrt(Lr/Cr)/R.  R->5R => Q->Q/5 => 0.2*Q. Correct.
+                Qe_light = Qe_real * 0.2
+                G_req_max = specs.Vout * n_used / specs.Vin_max
+                fN_max = solve_fN(G_req_max, Ln_real, Qe_light)
+                
+                if fN_min is None or fN_max is None:
+                    continue # Valid design must be solvable at corners
+                    
+                fsw_min_val = fN_min * fR_real
+                fsw_max_val = fN_max * fR_real
+                if fsw_min_val < 1e-9: fsw_min_val = 1.0 # Protect DivZero
+                
+                span_ratio = fsw_max_val / fsw_min_val
+                
+                # Penalty Rule
+                SPAN_RATIO_ALLOWED = 1.6
+                w_span = 0.6
+                span_penalty = w_span * max(0, span_ratio - SPAN_RATIO_ALLOWED)
+                
+                warnings_list = []
+                if span_ratio > 2.0:
+                    warnings_list.append(f"High fsw span ({span_ratio:.1f}x)")
+                
                 # Recalculate actual gain (solver might produce fN yielding close but not exact target)
                 gain_val = gain_fha(fN, Ln_real, Qe_real)
                 
@@ -167,13 +201,18 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                     Iq_rms=stress['Iq_rms'],
                     Iq_peak=stress['Iq_peak'],
                     Id_rms=stress['Id_rms'],
-                    Id_peak=stress['Id_peak']
+                    Id_peak=stress['Id_peak'],
+                    # Span Metrics
+                    fsw_min_corner=fsw_min_val,
+                    fsw_max_corner=fsw_max_val,
+                    fsw_span_ratio=span_ratio
                 )
                 
                 # Validate & Score
                 from .validation import validate_result
                 res.warnings = validate_result(res)
-                res.score = calculate_score(res)
+                res.warnings.extend(warnings_list)
+                res.score = calculate_score(res) + span_penalty
                 
                 results.append(res)
             

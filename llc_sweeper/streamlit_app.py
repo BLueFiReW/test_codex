@@ -147,7 +147,53 @@ if run_btn:
             # Tabs for Analysis
             tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])
             
-            # ... (Tab 1 unchanged) ...
+            # --- Tab 1: Plots ---
+            with tab1:
+                st.subheader("Gain vs Normalized Frequency")
+                
+                # Futuristic Style Context
+                with plt.style.context('dark_background'):
+                    fig, ax = plt.subplots(figsize=(10, 5))
+                    fig.patch.set_facecolor('#0E1117') 
+                    ax.set_facecolor('#0E1117')
+                    
+                    fN_range = np.linspace(0.4, 2.5, 500)
+                    colors = ['#00FFFF', '#FF00FF', '#00FF00'] # Cyan, Magenta, Lime
+                    
+                    for i, res in enumerate(top_candidates):
+                        color = colors[i % len(colors)]
+                        curve = gain_fha(fN_range, res.tank.Ln_real, res.tank.Qe_real)
+                        
+                        # "Glow" effect
+                        ax.plot(fN_range, curve, color=color, linewidth=4, alpha=0.3)
+                        ax.plot(fN_range, curve, color=color, linewidth=2, label=f"#{i+1}: Ln={res.tank.Ln_real:.1f}, Qe={res.tank.Qe_real:.2f}")
+                        
+                        # Neon Scatter
+                        ax.scatter([res.fN], [res.gain], color='white', edgecolor=color, s=80, zorder=5)
+                        
+                    ax.axhline(top_candidates[0].target_gain, color='#FF4B4B', linestyle='--', linewidth=1, label='Target Gain')
+                    ax.set_ylim(bottom=0)
+                    
+                    # Custom Grid
+                    ax.grid(True, color='#444444', linestyle='--', linewidth=0.5, alpha=0.5)
+                    
+                    # Remove spines
+                    ax.spines['top'].set_visible(False)
+                    ax.spines['right'].set_visible(False)
+                    ax.spines['left'].set_color('#888888')
+                    ax.spines['bottom'].set_color('#888888')
+                    ax.tick_params(colors='#888888')
+                    
+                    ax.set_xlabel("Normalized Frequency ($f_N$)", color='white', fontsize=10)
+                    ax.set_ylabel("Gain (M)", color='white', fontsize=10)
+                    
+                    # Legend with dark background
+                    legend = ax.legend(frameon=False)
+                    plt.setp(legend.get_texts(), color='#CCCCCC')
+                    
+                    ax.autoscale(enable=True, axis='y')
+                    
+                    st.pyplot(fig)
             
             # --- Tab 2: Resonance Tuner ---
             with tab2:
@@ -260,6 +306,30 @@ if run_btn:
                 }
                 
                 st.table(pd.DataFrame(ds_data))
+
+            # --- Tab 4: Leaderboard ---
+            with tab4:
+                st.subheader("Top 20 Candidates")
+                
+                # Create DataFrame
+                # Flatten objects
+                lb_data = []
+                for r in results[:20]: # Top 20
+                    lb_data.append({
+                        "Rank": len(lb_data)+1,
+                        "Score": f"{r.score:.3f}",
+                        "Ln": f"{r.tank.Ln_real:.2f}",
+                        "Qe": f"{r.tank.Qe_real:.3f}",
+                        "Lr (uH)": f"{r.tank.Lr*1e6:.1f}",
+                        "Cr (nF)": f"{r.tank.Cr*1e9:.1f}",
+                        "Lm (uH)": f"{r.tank.Lm*1e6:.1f}",
+                        "fN": f"{r.fN:.3f}",
+                        "fsw (kHz)": f"{r.fsw/1e3:.1f}",
+                        "Pri RMS (A)": f"{r.Ilr_rms:.2f}",
+                        "Warnings": ", ".join(r.warnings) if r.warnings else "OK"
+                    })
+                
+                st.dataframe(pd.DataFrame(lb_data), use_container_width=True)
 
 else:
     st.info("👈 Adjust specifications in the sidebar and click **Run Sweep** to start.")

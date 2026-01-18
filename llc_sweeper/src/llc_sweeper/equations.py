@@ -135,47 +135,7 @@ def required_gain(Vin: float, Vout: float, n: int) -> float:
     """
     return (Vout * 2 * n) / Vin
 
-def calculate_stress(
-    Vin: float, Vout: float, Pout: float, n: int, fN: float, Lm: float, fsw: float, Lr: float
-) -> dict:
-    """
-    Step 8: Stress calculations.
-    Returns dictionary with all stress values.
-    """
-    # Eq (19) ILM_PEAK
-    # Note: Article uses Vout_reflected or Vin? 
-    # Eq 19: ILM_PEAK = (n * Vout) / (4 * fsw * Lm)
-    Ilm_peak = (n * Vout) / (4 * fsw * Lm)
-    
-    # Eq (20) ILR_RMS
-    # ILR_RMS = sqrt( ILM_RMS^2 + I_LOAD_RMS_PRI^2 )?
-    # Article: ILR_RMS = (1/sqrt(2)) * sqrt( ILM_PEAK^2 + (pi^2 / 8) * (n * Iout)^2 ) 
-    # where Iout = Pout/Vout
-    Iout = Pout / Vout
-    Ilr_rms = (1 / np.sqrt(2)) * np.sqrt(Ilm_peak**2 + ((np.pi**2)/8) * (n * Iout)**2)
-    
-    # Eq (21) ILR_PEAK
-    Ilr_peak = np.sqrt(2) * Ilr_rms
-    
-    # Eq (22) VCR_PEAK (Article calls it VCR, implies peak or max swing)
-    # VCR = Vin / 2 + (Pout / (2 * pi * fsw * Current?)) ??
-    # Article Eq 22: V_CR_PK = Vin/2 + (I_LR_PEAK / (2 * pi * fsw * Cr)) ?? 
-    # WAIT, Article Eq 22: VCR = Vin/2 + sqrt(2)*ILR_RMS / (2*pi*fsw*Cr_val)
-    # We need Cr. It wasn't passed in. But fR and Lr are related.
-    # From resonance: wR = 1/sqrt(LrCr) -> Cr = 1/(wR^2 Lr).
-    # But fsw is potentially different from fR.
-    # Let's derive Cr from Lr and resonant frequency? 
-    # Better to pass Cr in or calculating it.
-    # Let's rely on the caller to pass 'Cr' or we estimate it?
-    # Wait, stress calc usually happens AFTER tank design, so we know Cr.
-    # I will add Cr to arguments.
-    # Actually, let's use the relation: Xc = 1/(2pi fsw Cr). Vc_ac = Ilr_peak * Xc.
-    # Vcr_max = Vin/2 + Vc_ac.
-    pass 
-    
-    # ... I will implement the rest in the main function block below to capture Cr.
-    
-    return {}
+
 
 def calculate_stress_full(
     Vin: float, Vout: float, Pout: float, n: int, 

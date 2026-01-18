@@ -162,10 +162,10 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                 G_req_min = required_gain(specs.Vin_min, specs.Vout, n_used)
                 fN_min = solve_fN(G_req_min, Ln_real, Qe_real)
                 
-                # B) fsw_max_corner at (Vin_max, 20% Load)
-                # Qe_light = Qe_real * 0.2 (R_load increases x5 -> Q decreases x5)
-                # Note: Q = sqrt(Lr/Cr)/R.  R->5R => Q->Q/5 => 0.2*Q. Correct.
-                Qe_light = Qe_real * 0.2
+                # B) fsw_max_corner at (Vin_max, Light Load)
+                # Qe_light depends on load ratio. R_load increases by factor (1/ratio).
+                # Q = sqrt(Lr/Cr)/R.  Q_light = Q_nom * ratio.
+                Qe_light = Qe_real * specs.light_load_ratio
                 G_req_max = required_gain(specs.Vin_max, specs.Vout, n_used)
                 fN_max = solve_fN(G_req_max, Ln_real, Qe_light)
                 
@@ -182,7 +182,7 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                     span_ratio = fsw_max_val / fsw_min_val
                 
                 # Penalty Rule (Span Ratio)
-                SPAN_RATIO_ALLOWED = 1.6
+                SPAN_RATIO_ALLOWED = specs.span_ratio_allowed
                 w_span = 0.6
                 # If soft fail (5.0), penalty will be large (5.0 - 1.6)*0.6 ~= 2.0
                 span_penalty = w_span * max(0, span_ratio - SPAN_RATIO_ALLOWED)

@@ -26,6 +26,9 @@ class LLCSpecs:
     Vin_min: float = None
     Vin_max: float = None
     fsw_max_limit: float = None # Max allowed switching frequency (e.g. at light load)
+    # Penalty Config
+    span_ratio_allowed: float = 1.6
+    light_load_ratio: float = 0.20 # 20%
     @property
     def Iout(self) -> float:
         return self.Pout / self.Vout

@@ -13,6 +13,12 @@ A Python tool for designing and sweeping parameters for a Half-Bridge LLC Resona
 pip install -e .
 ```
 
+## Run Streamlit
+To launch the interactive web application:
+```bash
+streamlit run streamlit_app.py
+```
+
 ## Usage
 
 ### CLI

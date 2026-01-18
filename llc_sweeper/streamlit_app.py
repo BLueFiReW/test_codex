@@ -98,6 +98,11 @@ with st.sidebar:
         # Let's just add fsw_max_limit here.
         fsw_max_limit = c7.number_input("Max fsw (kHz) @ Light Load", value=300.0, step=10.0) * 1e3
 
+    with st.expander("Advanced Config", expanded=False):
+         span_ratio_allowed = st.slider("Max Allowed Span Ratio (Score Penalty)", 1.0, 3.0, 1.6, 0.1)
+         light_load_pct = st.slider("Light Load Definition (%)", 5, 50, 20, 5)
+         light_load_ratio = light_load_pct / 100.0
+
     run_btn = st.button("🚀 Run Sweep")
 
 # --- Logic ---
@@ -112,7 +117,9 @@ if run_btn:
             Ln_min=Ln_min, Ln_max=Ln_max,
             Qe_min=Qe_min, Qe_max=Qe_max,
             Vin_min=Vin_min, Vin_max=Vin_max,
-            fsw_max_limit=fsw_max_limit
+            fsw_max_limit=fsw_max_limit,
+            span_ratio_allowed=span_ratio_allowed,
+            light_load_ratio=light_load_ratio
         )
         
         # 2. Run
@@ -121,13 +128,22 @@ if run_btn:
         if not results:
             st.error("No valid designs found within these constraints. Try widening the sweep range.")
         else:
-            top_candidates = get_diverse_candidates(results, top_n=3)
-            best = top_candidates[0] # Define 'best' globally for all tabs
-            
             # --- Results Area ---
-            st.success(f"Sweep Complete! Found {len(results)} valid candidates. Showing Top {len(top_candidates)} Diverse Options.")
+            st.success(f"Sweep Complete! Found {len(results)} valid candidates.")
             
-            # Store in session state for persistence if needed (simple app doesn't need it if running on button)
+            # Top Summary
+            best = results[0]
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Best Candidate Span", f"{best.fsw_span_ratio:.2f}x")
+            warn_count = len(best.warnings)
+            m2.metric("Warnings", f"{warn_count}", delta_color="inverse" if warn_count > 0 else "normal")
+            m3.metric("Efficiency Score", f"{best.score:.3f}")
+            st.markdown("---")
+            
+            top_candidates = get_diverse_candidates(results, top_n=3)
+            # best is results[0], usually same as top_candidates[0] if logic aligns
+            
+            st.markdown(f"**Showing Top {len(top_candidates)} Diverse Options:**")
             
             # Display Top Candidates in Cards
             cols = st.columns(len(top_candidates))

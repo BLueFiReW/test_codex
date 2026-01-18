@@ -42,15 +42,17 @@ st.markdown("""
         height: 3em;
     }
     .metric-card {
-        background-color: #f0f2f6;
+        background-color: #161616;
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        border: 1px solid #333;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
         margin-bottom: 10px;
-        color: #000000; /* Force black text */
+        color: #ffffff;
     }
-    .metric-card h3 { color: #000000 !important; }
-    .metric-card p { color: #000000 !important; }
+    .metric-card h3 { color: #00FFFF !important; margin-bottom: 5px; }
+    .metric-card p { color: #e0e0e0 !important; margin: 2px 0; }
+    .metric-card hr { border-color: #333; margin: 8px 0; }
     h1 { color: inherit; } /* Let Streamlit handle main headers */
     h2 { color: inherit; } 
     h3 { color: inherit; }
@@ -123,28 +125,29 @@ if run_btn:
                 t = res.tank
                 warn_html = ""
                 if res.warnings:
-                    warn_html = f"<div style='color:red; font-size:0.8em; margin-top:5px; border-top:1px solid #ffcccc; padding-top:2px;'>⚠️ {', '.join(res.warnings)}</div>"
+                    warn_html = f"<div style='color:#FF6666; font-size:0.8em; margin-top:5px; border-top:1px solid #550000; padding-top:2px;'>⚠️ {', '.join(res.warnings)}</div>"
 
                 with col:
-                    card_html = textwrap.dedent(f"""
-                    <div class="metric-card">
-                        <h3>Candidate #{i+1}</h3>
-                        {warn_html}
-                        <p><b>Score:</b> {res.score:.3f}</p>
-                        <hr style="margin: 5px 0;">
-                        <p><b>Ln:</b> {t.Ln_real:.2f} | <b>Qe:</b> {t.Qe_real:.3f}</p>
-                        <p>n = {t.n_used} <span style='font-size:0.8em; color:#666;'>(id. {t.n_float:.2f})</span></p>
-                        <p>Lr = {t.Lr*1e6:.1f} uH</p>
-                        <p>Cr = {t.Cr*1e9:.1f} nF</p>
-                        <p>Lm = {t.Lm*1e6:.1f} uH</p>
-                        <hr style="margin: 5px 0;">
-                        <p><b>Stress:</b></p>
-                        <p>Pri RMS: {res.Ilr_rms:.2f} A</p>
-                        <p>Cap RMS: {res.Vcr_rms:.1f} V</p>
-                        <p>Cap Pk: {res.Vcr_peak:.0f} V</p>
-                    </div>
-                    """)
-                    st.markdown(card_html, unsafe_allow_html=True)
+                    # Construct HTML with simple string concatenation to avoid indentation/markdown-code-block issues
+                    card_content = f"""
+<div class="metric-card">
+    <h3>Candidate #{i+1}</h3>
+    {warn_html}
+    <p><b>Score:</b> {res.score:.3f}</p>
+    <hr>
+    <p><b>L<sub>n</sub>:</b> {t.Ln_real:.2f} | <b>Q<sub>e</sub>:</b> {t.Qe_real:.3f}</p>
+    <p>n = {t.n_used} <span style='font-size:0.8em; color:#888;'>(id. {t.n_float:.2f})</span></p>
+    <p>L<sub>r</sub> = {t.Lr*1e6:.1f} &mu;H</p>
+    <p>C<sub>r</sub> = {t.Cr*1e9:.1f} nF</p>
+    <p>L<sub>m</sub> = {t.Lm*1e6:.1f} &mu;H</p>
+    <hr>
+    <p><b>Stress:</b></p>
+    <p>Pri RMS: {res.Ilr_rms:.2f} A</p>
+    <p>Cap RMS: {res.Vcr_rms:.1f} V</p>
+    <p>Cap Pk: {res.Vcr_peak:.0f} V</p>
+</div>
+"""
+                    st.markdown(card_content, unsafe_allow_html=True)
             
             # Tabs for Analysis
             tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])

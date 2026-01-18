@@ -50,7 +50,7 @@ st.markdown("""
         margin-bottom: 10px;
         color: #ffffff;
     }
-    .metric-card h3 { color: #00FFFF !important; margin-bottom: 5px; }
+    .metric-card h3 { color: #ffffff !important; margin-bottom: 5px; }
     .metric-card p { color: #e0e0e0 !important; margin: 2px 0; }
     .metric-card hr { border-color: #333; margin: 8px 0; }
     h1 { color: inherit; } /* Let Streamlit handle main headers */
@@ -128,26 +128,26 @@ if run_btn:
                     warn_html = f"<div style='color:#FF6666; font-size:0.8em; margin-top:5px; border-top:1px solid #550000; padding-top:2px;'>⚠️ {', '.join(res.warnings)}</div>"
 
                 with col:
-                    # Construct HTML with simple string concatenation to avoid indentation/markdown-code-block issues
-                    card_content = f"""
-<div class="metric-card">
-    <h3>Candidate #{i+1}</h3>
-    {warn_html}
-    <p><b>Score:</b> {res.score:.3f}</p>
-    <hr>
-    <p><b>L<sub>n</sub>:</b> {t.Ln_real:.2f} | <b>Q<sub>e</sub>:</b> {t.Qe_real:.3f}</p>
-    <p>n = {t.n_used} <span style='font-size:0.8em; color:#888;'>(id. {t.n_float:.2f})</span></p>
-    <p>L<sub>r</sub> = {t.Lr*1e6:.1f} &mu;H</p>
-    <p>C<sub>r</sub> = {t.Cr*1e9:.1f} nF</p>
-    <p>L<sub>m</sub> = {t.Lm*1e6:.1f} &mu;H</p>
-    <hr>
-    <p><b>Stress:</b></p>
-    <p>Pri RMS: {res.Ilr_rms:.2f} A</p>
-    <p>Cap RMS: {res.Vcr_rms:.1f} V</p>
-    <p>Cap Pk: {res.Vcr_peak:.0f} V</p>
-</div>
-"""
-                    st.markdown(card_content, unsafe_allow_html=True)
+                    # Use list join to prevent markdown indentation issues
+                    html_list = [
+                        '<div class="metric-card">',
+                        f'    <h3>Candidate #{i+1}</h3>',
+                        f'    {warn_html}',
+                        f'    <p><b>Score:</b> {res.score:.3f}</p>',
+                        '    <hr>',
+                        f'    <p><b>L<sub>n</sub>:</b> {t.Ln_real:.2f} | <b>Q<sub>e</sub>:</b> {t.Qe_real:.3f}</p>',
+                        f'    <p>n = {t.n_used} <span style="font-size:0.8em; color:#888;">(id. {t.n_float:.2f})</span></p>',
+                        f'    <p>L<sub>r</sub> = {t.Lr*1e6:.1f} &mu;H</p>',
+                        f'    <p>C<sub>r</sub> = {t.Cr*1e9:.1f} nF</p>',
+                        f'    <p>L<sub>m</sub> = {t.Lm*1e6:.1f} &mu;H</p>',
+                        '    <hr>',
+                        f'    <p><b>Stress:</b></p>',
+                        f'    <p>Pri RMS: {res.Ilr_rms:.2f} A</p>',
+                        f'    <p>Cap RMS: {res.Vcr_rms:.1f} V</p>',
+                        f'    <p>Cap Pk: {res.Vcr_peak:.0f} V</p>',
+                        '</div>'
+                    ]
+                    st.markdown("\n".join(html_list), unsafe_allow_html=True)
             
             # Tabs for Analysis
             tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])

@@ -25,3 +25,32 @@ coverage/
 # Generic
 temp/
 tmp/
+
+# -------------------------
+# Python / Virtualenv
+# -------------------------
+.venv/
+venv/
+ENV/
+env/
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Pytest
+.pytest_cache/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml

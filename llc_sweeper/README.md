@@ -1,98 +1,161 @@
-# LLC Design Sweeper
+LLC Design Sweeper ⚡
 
 A Python tool for designing and sweeping parameters for a Half-Bridge LLC Resonant Converter with a Center-Tapped Transformer.
 
-## Features
-- **Engineering-Grade Physics**: Follows strict equations for Gain, ZVS, and Stress.
-- **Robust Sweeper**: Optimizes $L_n$ and $Q_e$ to minimize stress and deviation from resonance.
-- **Interactive**: CLI for quick design, Jupyter Notebook for full analysis.
+This project solves the LLC operating point using an FHA gain model and ranks candidate tanks using an engineering-oriented score (stress + resonance + frequency-span constraints).
 
-## Installation
+Features
 
-**For CLI (Core Logic):**
-```bash
+Engineering-Grade Physics
+
+FHA gain model: Gain(fN, Ln, Qe)
+
+Explicit checks for ZVS feasibility and component stress
+
+Clear separation between:
+
+Article-level AC RMS stress
+
+Component-rating peak stress (includes DC bias)
+
+Robust Sweeper
+
+Sweeps and ranks Ln and Qe
+
+Uses a robust solver (brentq + fallback scan) to avoid crashes and keep near-miss solutions visible
+
+Multiple Interfaces
+
+CLI for fast engineering workflows
+
+Jupyter Notebook (notebooks/P2_demo.ipynb) for exploration and plots
+
+Streamlit Web UI for an interactive design experience
+
+Quickstart
+1) Install (CLI / Core Logic)
 pip install -e .
-```
 
-**For Web UI (Streamlit):**
-```bash
+2) Install (Web UI / Streamlit)
 pip install -r requirements.txt
 pip install -e .
-```
 
-## Run Streamlit
-To launch the interactive web application:
-```bash
+Run Streamlit
+
+Launch the interactive web app:
+
 streamlit run streamlit_app.py
-```
 
-## Usage
+Usage
+CLI
 
-### CLI
-Run with the article example:
-```bash
+Run the reference example:
+
 python -m llc_sweeper.cli --example
-```
 
-### Notebook
-Explore designs in `notebooks/P2_demo.ipynb`.
+Notebook
 
-## Scoring Methodology ("The Score")
-The tool ranks every valid design using a weighted **Cost Function**. A **lower score** means a better design.
+Open:
 
-$$ Score = w_1 \cdot \frac{I_{LR,rms}}{I_{ref}} + w_2 \cdot \frac{V_{Cr,peak}}{V_{ref}} + w_3 \cdot |f_N - 1.0| + Penalty $$
+notebooks/P2_demo.ipynb
 
-Where:
-1.  **Efficiency Metric ($w_1=1.0$)**: Minimizes Primary RMS Current ($I_{LR}$), which dominates conduction losses (MOSFETs + Transformer).
-2.  **Cost/Size Metric ($w_2=1.0$)**: Minimizes Peak Voltage on the Resonant Capacitor ($V_{Cr}$), allowing for smaller/cheaper capacitors.
-3.  **Resonance Fidelity ($w_3=0.2$)**: Favors designs operating close to $f_N=1.0$ (Peak Efficiency point), though some deviation is allowed.
-4.  **Penalty ($+10.0$ per warning)**: Soft constraints. If a design requires rounding that pushes $L_n$ or $Q_e$ slightly outside the user's limits ($>1\%$), it is heavily penalized but not discarded, so you can see "near-miss" options.
+Scoring Methodology ("The Score")
 
-## Frequency Span Penalty (Engineering Constraint)
+Each valid design is ranked using a weighted Cost Function.
+A lower score means a better (more practical) design.
 
-This tool ranks LLC tank candidates not only by electrical stress (RMS currents / capacitor voltage) but also by **how much switching frequency variation** is required across realistic operating conditions.
+Base Score Formula
+Score = w1*(ILR_rms / Iref)
+      + w2*(VCr_peak / Vref)
+      + w3*abs(fN - 1.0)
+      + Penalty
 
-### Why frequency span matters
+What each term means
+
+Efficiency Metric (w1 = 1.0)
+Minimizes Primary RMS Current (ILR_rms), which typically dominates conduction losses (MOSFETs + transformer).
+
+Cost/Size Metric (w2 = 1.0)
+Minimizes peak voltage on the resonant capacitor (VCr_peak), allowing smaller/cheaper capacitors.
+
+Resonance Fidelity (w3 = 0.2)
+Favors operation close to fN = 1.0 (peak-efficiency region), while still allowing deviation if needed.
+
+Penalty (+10.0 per warning)
+Soft constraints: if rounding pushes Ln or Qe slightly outside user limits (>1%), the design is penalized but not discarded, so you can still inspect near-miss options.
+
+Frequency Span Penalty (Engineering Constraint)
+
+In real hardware, a good LLC tank is not only low-stress at one operating point, but also does not require an excessive switching-frequency span across realistic conditions.
+
+Why frequency span matters
+
 Designs that require a very large switching-frequency span often:
-- complicate control and compensation,
-- increase EMI and audible noise risks,
-- operate far from resonance more often,
-- and may increase losses or stress in real hardware.
 
-### How fsw span is estimated
+complicate control and compensation,
+
+increase EMI and audible noise risks,
+
+operate far from resonance more often,
+
+and may increase losses and stress in real hardware.
+
+How fsw span is estimated
+
 We estimate the required frequency range using two operating corners per candidate:
 
-- **Minimum frequency corner (fsw_min_corner):**
-  - `Vin = Vin_min`
-  - `Pout = 100% rated load`
+Minimum frequency corner (fsw_min_corner)
 
-- **Maximum frequency corner (fsw_max_corner):**
-  - `Vin = Vin_max`
-  - `Pout = 20% rated load`
+Vin = Vin_min
 
-> The 20% load point is used as a practical threshold where most LLC controllers operate in continuous steady-state switching.
-> Below this level, many controllers enter burst/skip modes, where an effective continuous switching frequency is not well-defined.
+Pout = 100% rated load
+
+Maximum frequency corner (fsw_max_corner)
+
+Vin = Vin_max
+
+Pout = 20% rated load
+
+The 20% load point is used as a practical threshold where most LLC controllers still operate in continuous steady-state switching.
+Below this level, many controllers enter burst/skip modes, where an effective continuous switching frequency is not well-defined.
 
 For each corner:
-1. Compute required gain `G_req`
-2. Solve normalized frequency `fN` with robust root finding (brentq + fallback scan)
-3. Compute switching frequency:
-   `fsw = fN * fR_real`
 
-### Span metrics
+Compute required gain G_req
+
+Solve normalized frequency fN (robust root finding: brentq + fallback scan)
+
+Compute switching frequency:
+fsw = fN * fR_real
+
+Span metrics
+
 We compute:
-- `fsw_span_ratio = fsw_max_corner / fsw_min_corner`
-- `fsw_span_kHz = (fsw_max_corner - fsw_min_corner)/1e3`
 
-### Penalty rule
+fsw_span_ratio = fsw_max_corner / fsw_min_corner
+
+fsw_span_kHz = (fsw_max_corner - fsw_min_corner) / 1e3
+
+Penalty rule
+
 A soft penalty is applied when the span ratio exceeds a recommended threshold:
 
-- `SPAN_RATIO_ALLOWED = 1.6`
+SPAN_RATIO_ALLOWED = 1.6
 
-Penalty:
-`span_penalty = w_span * max(0, fsw_span_ratio - SPAN_RATIO_ALLOWED)`
+span_penalty = w_span * max(0, fsw_span_ratio - SPAN_RATIO_ALLOWED)
+TotalScore   = BaseScore + span_penalty
 
-Total score:
-`TotalScore = BaseScore + span_penalty`
 
-The UI shows `fsw_min_corner`, `fsw_max_corner`, and `fsw_span_ratio` for each candidate.
+The UI shows fsw_min_corner, fsw_max_corner, and fsw_span_ratio for each candidate.
+
+Notes & Limitations
+
+The model is based on FHA equations and is intended for fast feasibility ranking.
+
+Final designs should be validated with time-domain simulation and hardware measurements.
+
+Light-load behavior depends on the controller (burst/skip transitions), so the 20% threshold is an engineering approximation.
+
+License
+
+MIT

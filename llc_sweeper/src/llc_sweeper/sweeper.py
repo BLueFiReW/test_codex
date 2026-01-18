@@ -181,11 +181,20 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                     if fsw_min_val < 1e-9: fsw_min_val = 1.0 
                     span_ratio = fsw_max_val / fsw_min_val
                 
-                # Penalty Rule
+                # Penalty Rule (Span Ratio)
                 SPAN_RATIO_ALLOWED = 1.6
                 w_span = 0.6
                 # If soft fail (5.0), penalty will be large (5.0 - 1.6)*0.6 ~= 2.0
                 span_penalty = w_span * max(0, span_ratio - SPAN_RATIO_ALLOWED)
+                
+                # Check Absolute Limits
+                if specs.fsw_max_limit is not None and fsw_max_val > specs.fsw_max_limit:
+                    warnings_list.append(f"fsw_max > {specs.fsw_max_limit/1e3:.0f}k")
+                    span_penalty += 5.0 # Hard penalty
+                    
+                if specs.fsw_min is not None and fsw_min_val < specs.fsw_min:
+                    warnings_list.append(f"fsw_min < {specs.fsw_min/1e3:.0f}k")
+                    span_penalty += 5.0 # Hard penalty
                 
                 if span_ratio > 2.0:
                     warnings_list.append(f"High fsw span ({span_ratio:.1f}x)")

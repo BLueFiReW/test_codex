@@ -83,7 +83,7 @@ with st.sidebar:
         Coss_pF = st.number_input("MOSFET Coss (pF)", value=80.0, step=10.0)
         t_dead_us = st.number_input("Max Deadtime (us)", value=2.0, step=0.1)
     
-    with st.expander("Sweep Range", expanded=False):
+    with st.expander("Sweep Range & Constraints", expanded=False):
         c3, c4 = st.columns(2)
         Ln_min = c3.number_input("Ln Min", value=4.0, min_value=1.5, max_value=20.0, step=0.5)
         Ln_max = c4.number_input("Ln Max", value=10.0, min_value=1.5, max_value=20.0, step=0.5)
@@ -91,6 +91,12 @@ with st.sidebar:
         c5, c6 = st.columns(2)
         Qe_min = c5.number_input("Qe Min", value=0.33, min_value=0.1, max_value=2.0, step=0.01)
         Qe_max = c6.number_input("Qe Max", value=0.50, min_value=0.1, max_value=2.0, step=0.01)
+        
+        st.markdown("**Frequency Limits**")
+        c7, c8 = st.columns(2)
+        # fsw_min is already in Frequencies section, but maybe user wants it here?
+        # Let's just add fsw_max_limit here.
+        fsw_max_limit = c7.number_input("Max fsw (kHz) @ Light Load", value=300.0, step=10.0) * 1e3
 
     run_btn = st.button("🚀 Run Sweep")
 
@@ -105,7 +111,8 @@ if run_btn:
             Coss=Coss_pF * 1e-12, deadtime=t_dead_us * 1e-6,
             Ln_min=Ln_min, Ln_max=Ln_max,
             Qe_min=Qe_min, Qe_max=Qe_max,
-            Vin_min=Vin_min, Vin_max=Vin_max
+            Vin_min=Vin_min, Vin_max=Vin_max,
+            fsw_max_limit=fsw_max_limit
         )
         
         # 2. Run

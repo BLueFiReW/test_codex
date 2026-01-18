@@ -25,6 +25,7 @@ class LLCSpecs:
     # Range Inputs for Span Check
     Vin_min: float = None
     Vin_max: float = None
+    fsw_max_limit: float = None # Max allowed switching frequency (e.g. at light load)
     @property
     def Iout(self) -> float:
         return self.Pout / self.Vout

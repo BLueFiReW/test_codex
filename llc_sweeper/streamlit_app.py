@@ -295,15 +295,19 @@ if run_btn:
                         "Input Voltage (Nominal)", "Input Voltage (Ideal Resonance)", "Output Voltage", "Output Power",
                         "Transformer Ratio (n)", "Resonant Inductor (Lr)", "Resonant Capacitor (Cr)", "Magnetizing Inductor (Lm)",
                         "Resonant Freq (fR)", "Quality Factor (Qe)", "Inductance Ratio (Ln)",
-                        "Pri RMS Current (Total)", "Mag RMS Current", "Res Cap Peak Volts", "Required Deadtime (ZVS)",
+                        "Lr RMS Current", "Lm RMS Current", 
+                        "Res Cap RMS Voltage (Article Eq 22)", "Res Cap Peak Voltage (Component Rating)",
+                        "Required Deadtime (ZVS)",
                         "Pri Switch Current (Peak)", "Pri Switch Current (RMS)",
                         "Sec Diode Current (Peak)", "Sec Diode Current (RMS)"
                     ],
                     "Value": [
                         f"{specs.Vin} V", f"{Vin_ideal:.1f} V", f"{specs.Vout} V", f"{specs.Pout} W",
-                        f"{best.tank.n_used}", f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
+                        f"{best.tank.n_used} (ideal eps: {abs(best.tank.n_float - best.tank.n_used):.3f})", 
+                        f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
                         f"{best.tank.fR_real/1e3:.2f} kHz", f"{best.tank.Qe_real:.3f}", f"{best.tank.Ln_real:.2f}",
-                        f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", f"{best.Vcr_peak:.1f} V", 
+                        f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", 
+                        f"{best.Vcr_rms:.2f} V", f"{best.Vcr_peak:.1f} V", 
                         f"{t_dead_req*1e6:.3f} us (Max {specs.deadtime*1e6:.1f})",
                         f"{best.Iq_peak:.2f} A", f"{best.Iq_rms:.2f} A",
                         f"{best.Id_peak:.2f} A", f"{best.Id_rms:.2f} A"

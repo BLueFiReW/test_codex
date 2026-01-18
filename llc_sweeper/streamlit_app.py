@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import textwrap
 
 # Import our package
 # Assuming the file is running from the root where 'src' is available or installed
@@ -125,7 +126,7 @@ if run_btn:
                     warn_html = f"<div style='color:red; font-size:0.8em; margin-top:5px; border-top:1px solid #ffcccc; padding-top:2px;'>⚠️ {', '.join(res.warnings)}</div>"
 
                 with col:
-                    st.markdown(f"""
+                    card_html = textwrap.dedent(f"""
                     <div class="metric-card">
                         <h3>Candidate #{i+1}</h3>
                         {warn_html}
@@ -142,7 +143,8 @@ if run_btn:
                         <p>Cap RMS: {res.Vcr_rms:.1f} V</p>
                         <p>Cap Pk: {res.Vcr_peak:.0f} V</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
+                    st.markdown(card_html, unsafe_allow_html=True)
             
             # Tabs for Analysis
             tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])

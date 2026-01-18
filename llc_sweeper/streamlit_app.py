@@ -103,8 +103,6 @@ if run_btn:
             Vin=Vin, Vout=Vout, Pout=Pout,
             fR_target=fR_target, fsw_min=fsw_min,
             Coss=Coss_pF * 1e-12, deadtime=t_dead_us * 1e-6,
-            fR_target=fR_target, fsw_min=fsw_min,
-            Coss=Coss_pF * 1e-12, deadtime=t_dead_us * 1e-6,
             Ln_min=Ln_min, Ln_max=Ln_max,
             Qe_min=Qe_min, Qe_max=Qe_max,
             Vin_min=Vin_min, Vin_max=Vin_max

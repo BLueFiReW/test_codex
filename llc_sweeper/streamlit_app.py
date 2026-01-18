@@ -144,23 +144,50 @@ if run_btn:
             with tab1:
                 st.subheader("Gain vs Normalized Frequency")
                 
-                fig, ax = plt.subplots(figsize=(10, 5))
-                fN_range = np.linspace(0.4, 2.5, 500)
-                
-                for i, res in enumerate(top_candidates):
-                    curve = gain_fha(fN_range, res.tank.Ln_real, res.tank.Qe_real)
-                    ax.plot(fN_range, curve, label=f"Cand #{i+1} (Ln={res.tank.Ln_real:.1f}, Qe={res.tank.Qe_real:.2f})")
-                    ax.scatter([res.fN], [res.gain], marker='o')
+                # Futuristic Style Context
+                with plt.style.context('dark_background'):
+                    fig, ax = plt.subplots(figsize=(10, 5))
+                    # Transparent figure background to blend with Streamlit (if desired, or keep black)
+                    fig.patch.set_facecolor('#0E1117') 
+                    ax.set_facecolor('#0E1117')
                     
-                ax.axhline(top_candidates[0].target_gain, color='r', linestyle='--', label='Target Gain')
-                ax.set_ylim(bottom=0)
-                ax.grid(True, alpha=0.3)
-                ax.set_xlabel("Normalized Frequency ($f_N$)")
-                ax.set_ylabel("Gain (M)")
-                ax.legend()
-                ax.autoscale(enable=True, axis='y')
-                
-                st.pyplot(fig)
+                    fN_range = np.linspace(0.4, 2.5, 500)
+                    colors = ['#00FFFF', '#FF00FF', '#00FF00'] # Cyan, Magenta, Lime
+                    
+                    for i, res in enumerate(top_candidates):
+                        color = colors[i % len(colors)]
+                        curve = gain_fha(fN_range, res.tank.Ln_real, res.tank.Qe_real)
+                        
+                        # "Glow" effect
+                        ax.plot(fN_range, curve, color=color, linewidth=4, alpha=0.3)
+                        ax.plot(fN_range, curve, color=color, linewidth=2, label=f"#{i+1}: Ln={res.tank.Ln_real:.1f}, Qe={res.tank.Qe_real:.2f}")
+                        
+                        # Neon Scatter
+                        ax.scatter([res.fN], [res.gain], color='white', edgecolor=color, s=80, zorder=5)
+                        
+                    ax.axhline(top_candidates[0].target_gain, color='#FF4B4B', linestyle='--', linewidth=1, label='Target Gain')
+                    ax.set_ylim(bottom=0)
+                    
+                    # Custom Grid
+                    ax.grid(True, color='#444444', linestyle='--', linewidth=0.5, alpha=0.5)
+                    
+                    # Remove spines
+                    ax.spines['top'].set_visible(False)
+                    ax.spines['right'].set_visible(False)
+                    ax.spines['left'].set_color('#888888')
+                    ax.spines['bottom'].set_color('#888888')
+                    ax.tick_params(colors='#888888')
+                    
+                    ax.set_xlabel("Normalized Frequency ($f_N$)", color='white', fontsize=10)
+                    ax.set_ylabel("Gain (M)", color='white', fontsize=10)
+                    
+                    # Legend with dark background
+                    legend = ax.legend(frameon=False)
+                    plt.setp(legend.get_texts(), color='#CCCCCC')
+                    
+                    ax.autoscale(enable=True, axis='y')
+                    
+                    st.pyplot(fig)
                 
             # --- Tab 2: Resonance Tuner ---
             with tab2:
@@ -199,27 +226,52 @@ if run_btn:
                 
                 # Plot Adjustment
                 st.markdown("### Operating Point Shift")
-                fig2, ax2 = plt.subplots(figsize=(10, 5))
-                fN_range = np.linspace(0.4, 2.5, 500)
-                curve = gain_fha(fN_range, best.tank.Ln_real, best.tank.Qe_real)
                 
-                # Solve exact fN for ideal case (should be 1.0 but verifying)
-                # Note: Vin_ideal is derived for G=1, so fN is 1.0.
-                fN_new = 1.0 
-                
-                ax2.plot(fN_range, curve, label='Gain Curve')
-                ax2.scatter([best.fN], [best.gain], color='red', s=100, label=f'Original: Vin={specs.Vin}V, fN={best.fN:.2f}')
-                ax2.scatter([fN_new], [1.0], color='green', marker='*', s=200, label=f'Adjusted: Vin={Vin_ideal:.0f}V, fN=1.00')
-                
-                ax2.axhline(1.0, linestyle='--', color='gray', alpha=0.5)
-                ax2.axvline(1.0, linestyle='--', color='gray', alpha=0.5)
-                ax2.grid(True, alpha=0.3)
-                ax2.set_xlabel("Normalized Frequency ($f_N$)")
-                ax2.set_ylabel("Gain (M)")
-                ax2.legend()
-                ax2.autoscale(enable=True, axis='y')
-                
-                st.pyplot(fig2)
+                with plt.style.context('dark_background'):
+                    fig2, ax2 = plt.subplots(figsize=(10, 5))
+                    fig2.patch.set_facecolor('#0E1117')
+                    ax2.set_facecolor('#0E1117')
+                    
+                    fN_range = np.linspace(0.4, 2.5, 500)
+                    curve = gain_fha(fN_range, best.tank.Ln_real, best.tank.Qe_real)
+                    
+                    # Solve exact fN for ideal case (should be 1.0 but verifying)
+                    fN_new = 1.0 
+                    
+                    # Neon Curve
+                    color_curve = '#00FFFF' # Cyan
+                    ax2.plot(fN_range, curve, color=color_curve, linewidth=4, alpha=0.3) # Glow
+                    ax2.plot(fN_range, curve, color=color_curve, linewidth=2, label='Gain Curve')
+                    
+                    # Points with Glow
+                    # Red Original
+                    ax2.scatter([best.fN], [best.gain], color='#FF4B4B', s=150, zorder=5, label=f'Original: fN={best.fN:.2f}')
+                    ax2.scatter([best.fN], [best.gain], color='#FF4B4B', s=400, alpha=0.3, zorder=4) # Glow ring
+                    
+                    # Green Adjusted
+                    ax2.scatter([fN_new], [1.0], color='#00FF00', marker='*', s=200, zorder=5, label=f'Adjusted: fN=1.00')
+                    ax2.scatter([fN_new], [1.0], color='#00FF00', marker='*', s=500, alpha=0.3, zorder=4) # Glow ring
+                    
+                    ax2.axhline(1.0, linestyle='--', color='#888888', linewidth=1, alpha=0.5)
+                    ax2.axvline(1.0, linestyle='--', color='#888888', linewidth=1, alpha=0.5)
+                    
+                    # Styling
+                    ax2.grid(True, color='#444444', linestyle='--', linewidth=0.5, alpha=0.5)
+                    ax2.spines['top'].set_visible(False)
+                    ax2.spines['right'].set_visible(False)
+                    ax2.spines['left'].set_color('#888888')
+                    ax2.spines['bottom'].set_color('#888888')
+                    ax2.tick_params(colors='#888888')
+                    
+                    ax2.set_xlabel("Normalized Frequency ($f_N$)", color='white')
+                    ax2.set_ylabel("Gain (M)", color='white')
+                    
+                    legend = ax2.legend(frameon=False)
+                    plt.setp(legend.get_texts(), color='#CCCCCC')
+                    
+                    ax2.autoscale(enable=True, axis='y')
+                    
+                    st.pyplot(fig2)
                 
             # --- Tab 3: Data Sheet ---
             with tab3:

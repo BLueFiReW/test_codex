@@ -156,6 +156,28 @@ Final designs should be validated with time-domain simulation and hardware measu
 
 Light-load behavior depends on the controller (burst/skip transitions), so the 20% threshold is an engineering approximation.
 
+
+OpenMagnetics Integration (P2.1)
+
+This tool includes an experimental integration with **OpenMagnetics** to propose real core/winding stacks for the top candidates.
+
+### Key Features
+- **Separate Design Approach (MVP)**: Designs the Transformer and Resonant Inductor as distinct components to ensure robustness.
+- **Physics-Driven**: Uses the swept $L_m$, $L_r$, turns ratio $n$, and calculated RMS currents ($I_{Lr,rms}$, $I_{Lm,rms}$) as inputs.
+- **Waveform Approximation**: Models excitation as Sinusoidal (currents) and Square-wave (voltages) for estimating core and winding losses using the OpenMagnetics MKF engine.
+
+### How to Enable
+1. Install the optional dependency:
+   ```bash
+   pip install PyOpenMagnetics
+   ```
+   *(Also included in `requirements.txt`)*
+2. Run the Streamlit UI.
+3. In the "Results" area, verify the **Best Candidate**.
+4. Go to the **🧲 Magnetics** tab and click **"Design Magnetics for Best Candidate"**.
+5. The tool will propose top core/winding combinations and update the efficiency score with estimated magnetic losses.
+
 License
+
 
 MIT

@@ -88,7 +88,10 @@ def calculate_score(res: SimulationResult) -> float:
     # Penalty for warnings (Soft constraint)
     penalty = 10.0 * len(res.warnings)
     
-    return term1 + term2 + term3 + penalty
+    # Magnetics Penalty (P2.1)
+    mag_penalty = res.magnetics_penalty if res.magnetics_penalty is not None else 0.0
+    
+    return term1 + term2 + term3 + penalty + mag_penalty
 
 def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
     """

@@ -8,8 +8,9 @@ import textwrap
 # Assuming the file is running from the root where 'src' is available or installed
 try:
     from llc_sweeper.models import LLCSpecs
-    from llc_sweeper.sweeper import sweep_design, get_diverse_candidates, solve_fN
+    from llc_sweeper.sweeper import sweep_design, get_diverse_candidates, solve_fN, calculate_score
     from llc_sweeper.equations import gain_fha, calculate_stress_full, calculate_required_deadtime
+    from llc_sweeper.magnetics.openmagnetics_adapter import design_transformer_openmagnetics, design_resonant_inductor_openmagnetics, is_openmagnetics_available
 except ImportError:
     # Handle case where src is local but not installed (e.g. Streamlit Cloud standard repo structure)
     import sys
@@ -181,7 +182,7 @@ if run_btn:
                     st.markdown("\n".join(html_list), unsafe_allow_html=True)
             
             # Tabs for Analysis
-            tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard", "🧲 Magnetics (OpenMagnetics)"])
             
             # --- Tab 1: Plots ---
             with tab1:
@@ -376,6 +377,68 @@ if run_btn:
                     })
                 
                 st.dataframe(pd.DataFrame(lb_data), use_container_width=True)
+
+            # --- Tab 5: Magnetics ---
+            with tab5:
+                st.subheader("🧲 Automated Magnetics Design")
+                
+                if not is_openmagnetics_available():
+                    st.warning("OpenMagnetics is not available. This feature requires the `PyOpenMagnetics` library.")
+                    st.info("To enable this feature, install optional dependencies:\n\n`pip install -r requirements.txt`")
+                else:
+                    st.markdown("""
+                    **Experimental Feature (P2.1)**: Uses OpenMagnetics to propose core and winding configurations.
+                    
+                    **Targets:**
+                    *   **Transformer**: Split-Bobbin or Standard (ETD, PQ, RM) to match $L_m$ and turns ratio $n$.
+                    *   **Resonant Inductor**: Gapped core options to match $L_r$.
+                    """)
+                    
+                    if st.button("✨ Design Magnetics for Best Candidate"):
+                        with st.spinner("Calling OpenMagnetics Design Adviser..."):
+                            # Run Design
+                            # Transformer
+                            tx_res = design_transformer_openmagnetics(specs, best, corner="full_load")
+                            best.transformer_design = tx_res
+                            
+                            # Inductor
+                            ind_res = design_resonant_inductor_openmagnetics(specs, best, corner="full_load")
+                            best.resonant_inductor_design = ind_res
+                            
+                            # Update Score (if valid)
+                            # We assume metrics are populated
+                            # Calculate total magnetics loss
+                            tx_loss = tx_res["metrics"].get("total_loss_W", 0.0)
+                            ind_loss = ind_res["metrics"].get("total_loss_W", 0.0)
+                            total_mag_loss = tx_loss + ind_loss
+                            best.magnetics_loss_total_W = total_mag_loss
+                            
+                            # Calc penalty
+                            # w_mag = 0.5, ref = 10W
+                            best.magnetics_penalty = 0.5 * (total_mag_loss / 10.0)
+                            
+                            # Check adapter warnings
+                            if tx_res.get("warnings"): best.magnetics_warnings.extend(tx_res["warnings"])
+                            if ind_res.get("warnings"): best.magnetics_warnings.extend(ind_res["warnings"])
+                            
+                            # Re-Score
+                            best.score = calculate_score(best)
+                            
+                            st.success(f"Magnetics Designed! Total Loss: {total_mag_loss:.2f} W. New Score: {best.score:.3f}")
+                            
+                            if tx_res["status"] == "fail":
+                                st.error(f"Transformer Design Failed: {tx_res['errors']}")
+                            if ind_res["status"] == "fail":
+                                st.error(f"Inductor Design Failed: {ind_res['errors']}")
+                                
+                            # Display Details
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.markdown("### Transformer Design")
+                                st.json(tx_res)
+                            with c2:
+                                st.markdown("### Resonant Inductor")
+                                st.json(ind_res)
 
 else:
     st.info("👈 Adjust specifications in the sidebar and click **Run Sweep** to start.")

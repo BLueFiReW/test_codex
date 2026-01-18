@@ -90,6 +90,13 @@ class SimulationResult:
     fsw_max_corner: float = 0.0
     fsw_span_ratio: float = 1.0
     
+    # Magnetics (P2.1)
+    transformer_design: Optional[dict] = None
+    resonant_inductor_design: Optional[dict] = None
+    magnetics_loss_total_W: Optional[float] = None
+    magnetics_penalty: Optional[float] = None
+    magnetics_warnings: List[str] = field(default_factory=list)
+    
     # Scoring
     score: float = 0.0
     valid: bool = True

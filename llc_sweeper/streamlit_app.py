@@ -46,10 +46,13 @@ st.markdown("""
         border-radius: 10px;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
         margin-bottom: 10px;
+        color: #000000; /* Force black text */
     }
-    h1 { color: #0E1117; }
-    h2 { color: #31333F; }
-    h3 { color: #31333F; }
+    .metric-card h3 { color: #000000 !important; }
+    .metric-card p { color: #000000 !important; }
+    h1 { color: inherit; } /* Let Streamlit handle main headers */
+    h2 { color: inherit; } 
+    h3 { color: inherit; }
 </style>
 """, unsafe_allow_html=True)
 

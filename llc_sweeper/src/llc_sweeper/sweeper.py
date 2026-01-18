@@ -163,6 +163,7 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                     Ilr_rms=stress['Ilr_rms'],
                     Ilr_peak=stress['Ilr_peak'],
                     Vcr_peak=stress['Vcr_peak'],
+                    Vcr_rms=stress['Vcr_rms'],
                     Iq_rms=stress['Iq_rms'],
                     Iq_peak=stress['Iq_peak'],
                     Id_rms=stress['Id_rms'],

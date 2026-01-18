@@ -117,28 +117,92 @@ if run_btn:
             
             selected_cand = None
             
-            for i, (col, res) in enumerate(zip(cols, top_candidates)):
                 t = res.tank
+                warn_html = ""
+                if res.warnings:
+                    warn_html = f"<div style='color:red; font-size:0.8em; margin-top:5px; border-top:1px solid #ffcccc; padding-top:2px;'>⚠️ {', '.join(res.warnings)}</div>"
+
                 with col:
                     st.markdown(f"""
                     <div class="metric-card">
                         <h3>Candidate #{i+1}</h3>
+                        {warn_html}
                         <p><b>Score:</b> {res.score:.3f}</p>
-                        <hr>
+                        <hr style="margin: 5px 0;">
                         <p><b>Ln:</b> {t.Ln_real:.2f} | <b>Qe:</b> {t.Qe_real:.3f}</p>
-                        <p>n = {t.n_used}</p>
+                        <p>n = {t.n_used} <span style='font-size:0.8em; color:#666;'>(id. {t.n_float:.2f})</span></p>
                         <p>Lr = {t.Lr*1e6:.1f} uH</p>
                         <p>Cr = {t.Cr*1e9:.1f} nF</p>
                         <p>Lm = {t.Lm*1e6:.1f} uH</p>
-                        <hr>
-                        <p><b>Stress (RMS):</b></p>
-                        <p>Pri: {res.Ilr_rms:.2f} A</p>
-                        <p>Cap: {res.Vcr_peak:.0f} V</p>
+                        <hr style="margin: 5px 0;">
+                        <p><b>Stress:</b></p>
+                        <p>Pri RMS: {res.Ilr_rms:.2f} A</p>
+                        <p>Cap RMS: {res.Vcr_rms:.1f} V</p>
+                        <p>Cap Pk: {res.Vcr_peak:.0f} V</p>
                     </div>
                     """, unsafe_allow_html=True)
             
             # Tabs for Analysis
-            tab1, tab2, tab3 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet"])
+            tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])
+            
+            # ... (Tab 1 & 2 unchanged) ...
+            
+            # --- Tab 3: Data Sheet ---
+            with tab3:
+                st.subheader("Detailed Parameters (Best Candidate)")
+                
+                # Calculate Deadtime Req
+                t_dead_req = calculate_required_deadtime(best.tank.Lm, specs.Coss, specs.fsw_min)
+                
+                ds_data = {
+                    "Parameter": [
+                        "Input Voltage (Nominal)", "Input Voltage (Ideal Resonance)", "Output Voltage", "Output Power",
+                        "Transformer Ratio (n)", "Resonant Inductor (Lr)", "Resonant Capacitor (Cr)", "Magnetizing Inductor (Lm)",
+                        "Resonant Freq (fR)", "Quality Factor (Qe)", "Inductance Ratio (Ln)",
+                        "Pri RMS Current (Total)", "Mag RMS Current", 
+                        "Res Cap RMS Voltage (Article Eq 22)", "Res Cap Peak Voltage (Component Rating)",
+                        "Required Deadtime (ZVS)",
+                        "Pri Switch Current (Peak)", "Pri Switch Current (RMS)",
+                        "Sec Diode Current (Peak)", "Sec Diode Current (RMS)"
+                    ],
+                    "Value": [
+                        f"{specs.Vin} V", f"{Vin_ideal:.1f} V", f"{specs.Vout} V", f"{specs.Pout} W",
+                        f"{best.tank.n_used} (ideal eps: {abs(best.tank.n_float - best.tank.n_used):.3f})", 
+                        f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
+                        f"{best.tank.fR_real/1e3:.2f} kHz", f"{best.tank.Qe_real:.3f}", f"{best.tank.Ln_real:.2f}",
+                        f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", 
+                        f"{best.Vcr_rms:.2f} V", f"{best.Vcr_peak:.1f} V", 
+                        f"{t_dead_req*1e6:.3f} us (Max {specs.deadtime*1e6:.1f})",
+                        f"{best.Iq_peak:.2f} A", f"{best.Iq_rms:.2f} A",
+                        f"{best.Id_peak:.2f} A", f"{best.Id_rms:.2f} A"
+                    ]
+                }
+                
+                st.table(pd.DataFrame(ds_data))
+                
+            # --- Tab 4: Leaderboard ---
+            with tab4:
+                st.subheader("Top 20 Candidates")
+                
+                # Create DataFrame
+                # Flatten objects
+                lb_data = []
+                for r in results[:20]: # Top 20
+                    lb_data.append({
+                        "Rank": len(lb_data)+1,
+                        "Score": f"{r.score:.3f}",
+                        "Ln": f"{r.tank.Ln_real:.2f}",
+                        "Qe": f"{r.tank.Qe_real:.3f}",
+                        "Lr (uH)": f"{r.tank.Lr*1e6:.1f}",
+                        "Cr (nF)": f"{r.tank.Cr*1e9:.1f}",
+                        "Lm (uH)": f"{r.tank.Lm*1e6:.1f}",
+                        "fN": f"{r.fN:.3f}",
+                        "fsw (kHz)": f"{r.fsw/1e3:.1f}",
+                        "Pri RMS (A)": f"{r.Ilr_rms:.2f}",
+                        "Warnings": ", ".join(r.warnings) if r.warnings else "OK"
+                    })
+                
+                st.dataframe(pd.DataFrame(lb_data), use_container_width=True)
             
             # --- Tab 1: Plots ---
             with tab1:

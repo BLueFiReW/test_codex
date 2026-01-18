@@ -71,7 +71,9 @@ class SimulationResult:
     Ilm_rms: float # Added
     Ilr_rms: float
     Ilr_peak: float
-    Vcr_peak: float
+    Ilr_peak: float
+    Vcr_peak: float # DC + AC Peak
+    Vcr_rms: float  # AC RMS (Article Eq 22)
     Iq_rms: float # Primary switch RMS (Q1, Q2)
     Iq_peak: float # Primary switch Peak (Q1, Q2)
     Id_rms: float # Secondary rectifier RMS (Q3, Q4)

@@ -9,7 +9,14 @@ A Python tool for designing and sweeping parameters for a Half-Bridge LLC Resona
 
 ## Installation
 
+**For CLI (Core Logic):**
 ```bash
+pip install -e .
+```
+
+**For Web UI (Streamlit):**
+```bash
+pip install -r requirements.txt
 pip install -e .
 ```
 

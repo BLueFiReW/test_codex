@@ -339,7 +339,7 @@ if run_btn:
                         f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
                         f"{best.tank.fR_real/1e3:.2f} kHz", f"{best.tank.Qe_real:.3f}", f"{best.tank.Ln_real:.2f}",
                         f"{best.fsw_min_corner/1e3:.1f} kHz (@ {specs.Vin_min}V, 100%)",
-                        f"{best.fsw_max_corner/1e3:.1f} kHz (@ {specs.Vin_max}V, 20%)",
+                        f"{best.fsw_max_corner/1e3:.1f} kHz (@ {specs.Vin_max}V, {light_load_pct}%)",
                         f"{best.fsw_span_ratio:.2f}x",
                         f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", 
                         f"{best.Vcr_rms:.2f} V", f"{best.Vcr_peak:.1f} V", 

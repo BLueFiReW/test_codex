@@ -76,10 +76,13 @@ with st.sidebar:
         t_dead_us = st.number_input("Max Deadtime (us)", value=2.0, step=0.1)
     
     with st.expander("Sweep Range", expanded=False):
-        Ln_min = st.slider("Ln Min", 2.0, 10.0, 4.0)
-        Ln_max = st.slider("Ln Max", 5.0, 20.0, 10.0)
-        Qe_min = st.slider("Qe Min", 0.1, 1.0, 0.33)
-        Qe_max = st.slider("Qe Max", 0.2, 2.0, 0.5)
+        c3, c4 = st.columns(2)
+        Ln_min = c3.number_input("Ln Min", value=4.0, min_value=1.5, max_value=20.0, step=0.5)
+        Ln_max = c4.number_input("Ln Max", value=10.0, min_value=1.5, max_value=20.0, step=0.5)
+        
+        c5, c6 = st.columns(2)
+        Qe_min = c5.number_input("Qe Min", value=0.33, min_value=0.1, max_value=2.0, step=0.01)
+        Qe_max = c6.number_input("Qe Max", value=0.50, min_value=0.1, max_value=2.0, step=0.01)
 
     run_btn = st.button("🚀 Run Sweep")
 
@@ -193,6 +196,30 @@ if run_btn:
                 
                 st.markdown("### Recalculated Stresses at Resonance")
                 st.metric("Primary RMS Current", f"{new_stress['Ilr_rms']:.2f} A", delta=f"{new_stress['Ilr_rms'] - best.Ilr_rms:.2f} A", delta_color="inverse")
+                
+                # Plot Adjustment
+                st.markdown("### Operating Point Shift")
+                fig2, ax2 = plt.subplots(figsize=(10, 5))
+                fN_range = np.linspace(0.4, 2.5, 500)
+                curve = gain_fha(fN_range, best.tank.Ln_real, best.tank.Qe_real)
+                
+                # Solve exact fN for ideal case (should be 1.0 but verifying)
+                # Note: Vin_ideal is derived for G=1, so fN is 1.0.
+                fN_new = 1.0 
+                
+                ax2.plot(fN_range, curve, label='Gain Curve')
+                ax2.scatter([best.fN], [best.gain], color='red', s=100, label=f'Original: Vin={specs.Vin}V, fN={best.fN:.2f}')
+                ax2.scatter([fN_new], [1.0], color='green', marker='*', s=200, label=f'Adjusted: Vin={Vin_ideal:.0f}V, fN=1.00')
+                
+                ax2.axhline(1.0, linestyle='--', color='gray', alpha=0.5)
+                ax2.axvline(1.0, linestyle='--', color='gray', alpha=0.5)
+                ax2.grid(True, alpha=0.3)
+                ax2.set_xlabel("Normalized Frequency ($f_N$)")
+                ax2.set_ylabel("Gain (M)")
+                ax2.legend()
+                ax2.autoscale(enable=True, axis='y')
+                
+                st.pyplot(fig2)
                 
             # --- Tab 3: Data Sheet ---
             with tab3:

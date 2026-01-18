@@ -106,6 +106,7 @@ if run_btn:
             st.error("No valid designs found within these constraints. Try widening the sweep range.")
         else:
             top_candidates = get_diverse_candidates(results, top_n=3)
+            best = top_candidates[0] # Define 'best' globally for all tabs
             
             # --- Results Area ---
             st.success(f"Sweep Complete! Found {len(results)} valid candidates. Showing Top {len(top_candidates)} Diverse Options.")
@@ -146,114 +147,8 @@ if run_btn:
             # Tabs for Analysis
             tab1, tab2, tab3, tab4 = st.tabs(["📈 Gain Curves", "🔧 Resonance Tuner (Vin Adjust)", "📋 Data Sheet", "🏆 Full Leaderboard"])
             
-            # ... (Tab 1 & 2 unchanged) ...
+            # ... (Tab 1 unchanged) ...
             
-            # --- Tab 3: Data Sheet ---
-            with tab3:
-                st.subheader("Detailed Parameters (Best Candidate)")
-                
-                # Calculate Deadtime Req
-                t_dead_req = calculate_required_deadtime(best.tank.Lm, specs.Coss, specs.fsw_min)
-                
-                ds_data = {
-                    "Parameter": [
-                        "Input Voltage (Nominal)", "Input Voltage (Ideal Resonance)", "Output Voltage", "Output Power",
-                        "Transformer Ratio (n)", "Resonant Inductor (Lr)", "Resonant Capacitor (Cr)", "Magnetizing Inductor (Lm)",
-                        "Resonant Freq (fR)", "Quality Factor (Qe)", "Inductance Ratio (Ln)",
-                        "Pri RMS Current (Total)", "Mag RMS Current", 
-                        "Res Cap RMS Voltage (Article Eq 22)", "Res Cap Peak Voltage (Component Rating)",
-                        "Required Deadtime (ZVS)",
-                        "Pri Switch Current (Peak)", "Pri Switch Current (RMS)",
-                        "Sec Diode Current (Peak)", "Sec Diode Current (RMS)"
-                    ],
-                    "Value": [
-                        f"{specs.Vin} V", f"{Vin_ideal:.1f} V", f"{specs.Vout} V", f"{specs.Pout} W",
-                        f"{best.tank.n_used} (ideal eps: {abs(best.tank.n_float - best.tank.n_used):.3f})", 
-                        f"{best.tank.Lr*1e6:.1f} uH", f"{best.tank.Cr*1e9:.1f} nF", f"{best.tank.Lm*1e6:.1f} uH",
-                        f"{best.tank.fR_real/1e3:.2f} kHz", f"{best.tank.Qe_real:.3f}", f"{best.tank.Ln_real:.2f}",
-                        f"{best.Ilr_rms:.2f} A", f"{best.Ilm_rms:.2f} A", 
-                        f"{best.Vcr_rms:.2f} V", f"{best.Vcr_peak:.1f} V", 
-                        f"{t_dead_req*1e6:.3f} us (Max {specs.deadtime*1e6:.1f})",
-                        f"{best.Iq_peak:.2f} A", f"{best.Iq_rms:.2f} A",
-                        f"{best.Id_peak:.2f} A", f"{best.Id_rms:.2f} A"
-                    ]
-                }
-                
-                st.table(pd.DataFrame(ds_data))
-                
-            # --- Tab 4: Leaderboard ---
-            with tab4:
-                st.subheader("Top 20 Candidates")
-                
-                # Create DataFrame
-                # Flatten objects
-                lb_data = []
-                for r in results[:20]: # Top 20
-                    lb_data.append({
-                        "Rank": len(lb_data)+1,
-                        "Score": f"{r.score:.3f}",
-                        "Ln": f"{r.tank.Ln_real:.2f}",
-                        "Qe": f"{r.tank.Qe_real:.3f}",
-                        "Lr (uH)": f"{r.tank.Lr*1e6:.1f}",
-                        "Cr (nF)": f"{r.tank.Cr*1e9:.1f}",
-                        "Lm (uH)": f"{r.tank.Lm*1e6:.1f}",
-                        "fN": f"{r.fN:.3f}",
-                        "fsw (kHz)": f"{r.fsw/1e3:.1f}",
-                        "Pri RMS (A)": f"{r.Ilr_rms:.2f}",
-                        "Warnings": ", ".join(r.warnings) if r.warnings else "OK"
-                    })
-                
-                st.dataframe(pd.DataFrame(lb_data), use_container_width=True)
-            
-            # --- Tab 1: Plots ---
-            with tab1:
-                st.subheader("Gain vs Normalized Frequency")
-                
-                # Futuristic Style Context
-                with plt.style.context('dark_background'):
-                    fig, ax = plt.subplots(figsize=(10, 5))
-                    # Transparent figure background to blend with Streamlit (if desired, or keep black)
-                    fig.patch.set_facecolor('#0E1117') 
-                    ax.set_facecolor('#0E1117')
-                    
-                    fN_range = np.linspace(0.4, 2.5, 500)
-                    colors = ['#00FFFF', '#FF00FF', '#00FF00'] # Cyan, Magenta, Lime
-                    
-                    for i, res in enumerate(top_candidates):
-                        color = colors[i % len(colors)]
-                        curve = gain_fha(fN_range, res.tank.Ln_real, res.tank.Qe_real)
-                        
-                        # "Glow" effect
-                        ax.plot(fN_range, curve, color=color, linewidth=4, alpha=0.3)
-                        ax.plot(fN_range, curve, color=color, linewidth=2, label=f"#{i+1}: Ln={res.tank.Ln_real:.1f}, Qe={res.tank.Qe_real:.2f}")
-                        
-                        # Neon Scatter
-                        ax.scatter([res.fN], [res.gain], color='white', edgecolor=color, s=80, zorder=5)
-                        
-                    ax.axhline(top_candidates[0].target_gain, color='#FF4B4B', linestyle='--', linewidth=1, label='Target Gain')
-                    ax.set_ylim(bottom=0)
-                    
-                    # Custom Grid
-                    ax.grid(True, color='#444444', linestyle='--', linewidth=0.5, alpha=0.5)
-                    
-                    # Remove spines
-                    ax.spines['top'].set_visible(False)
-                    ax.spines['right'].set_visible(False)
-                    ax.spines['left'].set_color('#888888')
-                    ax.spines['bottom'].set_color('#888888')
-                    ax.tick_params(colors='#888888')
-                    
-                    ax.set_xlabel("Normalized Frequency ($f_N$)", color='white', fontsize=10)
-                    ax.set_ylabel("Gain (M)", color='white', fontsize=10)
-                    
-                    # Legend with dark background
-                    legend = ax.legend(frameon=False)
-                    plt.setp(legend.get_texts(), color='#CCCCCC')
-                    
-                    ax.autoscale(enable=True, axis='y')
-                    
-                    st.pyplot(fig)
-                
             # --- Tab 2: Resonance Tuner ---
             with tab2:
                 st.subheader("Achieving Perfect Resonance ($f_N=1$)")
@@ -262,8 +157,7 @@ if run_btn:
                 We can adjust the **Input Voltage** to restore perfect resonance.
                 """)
                 
-                # Pick best candidate
-                best = top_candidates[0]
+                # 'best' is already defined above
                 n_used = best.tank.n_used
                 Vin_ideal = 2 * n_used * specs.Vout
                 

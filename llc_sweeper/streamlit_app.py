@@ -13,7 +13,11 @@ except ImportError:
     # Handle case where src is local but not installed (e.g. Streamlit Cloud standard repo structure)
     import sys
     import os
-    sys.path.append(os.path.abspath("src"))
+    # Robustly add 'src' relative to this script file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    src_path = os.path.join(current_dir, "src")
+    if src_path not in sys.path:
+        sys.path.append(src_path)
     from llc_sweeper.models import LLCSpecs
     from llc_sweeper.sweeper import sweep_design, get_diverse_candidates, solve_fN
     from llc_sweeper.equations import gain_fha, calculate_stress_full, calculate_required_deadtime

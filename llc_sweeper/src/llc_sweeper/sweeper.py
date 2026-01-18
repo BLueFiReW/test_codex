@@ -152,9 +152,12 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                 )
                 
                 # Result Object
+                # Recalculate actual gain (solver might produce fN yielding close but not exact target)
+                gain_val = gain_fha(fN, Ln_real, Qe_real)
+                
                 res = SimulationResult(
                     specs=specs, tank=tank,
-                    target_gain=G_req, fN=fN, fsw=fsw, gain=G_req, 
+                    target_gain=G_req, fN=fN, fsw=fsw, gain=gain_val, 
                     Ilm_peak=stress['Ilm_peak'],
                     Ilm_rms=stress['Ilm_rms'],
                     Ilr_rms=stress['Ilr_rms'],

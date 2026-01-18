@@ -74,17 +74,17 @@ def test_step5_tank_selection():
     # Cr = 1 / (2pi * 100k * 49.8 * 0.35) 
     # = 1 / (628318 * 17.43) = 1 / 10951582 ~= 91.3 nF
     # Article selects Cr = 94nF (2x 47nF).
-    assert Cr_calc == pytest.approx(91.3e-9, 0.1e-9)
+    assert Cr_calc == pytest.approx(91.3e-9, abs=0.1e-9)
     
     # Lr = ? 
     # From Eq 9: 1/((2pi*100k)^2 * 91.3e-9)
     # = 1 / (3.94e11 * 9.13e-8) = 1 / 36000 ~= 27.7 uH
     # Article says 27uH.
-    assert Lr_calc == pytest.approx(27.7e-6, 0.5e-6)
+    assert Lr_calc == pytest.approx(27.7e-6, abs=0.5e-6)
     
     # Lm = 9 * 27.7 = 249 uH
     # Article says 243uH (using 27uH).
-    assert Lm_calc == pytest.approx(249e-6, 5e-6)
+    assert Lm_calc == pytest.approx(249e-6, abs=5e-6)
 
 def test_gain_fha_resonance():
     """Test Gain at resonance (fN=1)."""

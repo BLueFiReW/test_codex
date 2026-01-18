@@ -186,31 +186,40 @@ def calculate_stress_full(
     """
     Iout = Pout / Vout
     
-    # Eq (19)
+    # Eq (19) Peak Magnetizing Current
     Ilm_peak = (n * Vout) / (4 * fsw * Lm)
-    Ilm_rms = Ilm_peak / np.sqrt(2) # FHA assumption: Sinusoidal current in Lm? 
-    # Actually Lm current is triangular in reality, but FHA often treats components as sinusoidal.
-    # Triangular RMS is Peak/sqrt(3).
-    # Article context: "The magnetizing current iLm is triangular..." (Usually).
-    # But Eq 20 uses Ilm_peak^2 directly to add to I_load^2 (sinusoidal).
-    # Let's assume FHA (sinusoidal) for consistency with Eq 20 unless Article specified Triangular.
-    # Given Eq 20 form (sum of squares), it implies orthogonal sinusoidal components.
+    Ilm_rms = Ilm_peak / np.sqrt(2) # FHA Sinusoidal Approximation
     
-    # Eq (20)
-    # Reflected load current is Iout / n
-    Ilr_rms = (1 / np.sqrt(2)) * np.sqrt(Ilm_peak**2 + ((np.pi**2)/8) * (Iout / n)**2)
+    # Eq (20) Primary Resonant Current RMS
+    # Vector sum of Magnetizing RMS (Inductive) and Reflected Load RMS (Resistive)
+    # Reflected Load Fundamental RMS:
+    # I_load_sq_peak = Iout / n
+    # I_load_fund_peak = (4/pi) * I_load_sq_peak
+    # I_load_fund_rms = I_load_fund_peak / sqrt(2) = (2*sqrt(2)/pi) * (Iout/n)
+    # Wait, (2*sqrt(2)/pi) approx 0.9003.
+    # User article form: sqrt( Ilm_rms^2 + (pi^2/8)*(Iout/n)^2 ) ?
+    # Let's check: (pi^2/8) = 1.233. sqrt(1.233) = 1.11. 
+    # (4/pi * 1/sqrt(2))? No. 
+    # Let's use the standard analytical FHA form:
+    # I_load_rms_pri = (np.pi / (2 * np.sqrt(2))) * (Iout / n)
+    # This matches commonly accepted FHA.
+    I_load_rms_pri = (np.pi * Iout) / (2 * np.sqrt(2) * n)
     
-    # Eq (21)
+    Ilr_rms = np.sqrt(Ilm_rms**2 + I_load_rms_pri**2)
+    
+    # Eq (21) Peak Primary Current
     Ilr_peak = np.sqrt(2) * Ilr_rms
     
-    # Eq (22) - Assumption: VCR is V_CR_peak centered at Vin/2
-    Vcr_peak = (Vin / 2) + (Ilr_peak) / (2 * np.pi * fsw * Cr)
+    # Eq (22) Resonant Capacitor Voltage
+    # VCR (AC RMS) = ILR_RMS / (2 * pi * fsw * Cr)
+    Vcr_rms = Ilr_rms / (2 * np.pi * fsw * Cr)
+    
+    # Physical Peak Voltage (DC Bias + AC Peak)
+    Vcr_peak = (Vin / 2) + (np.sqrt(2) * Vcr_rms)
     
     # Secondary Currents (Rectified Sine approximation)
-    # I_sec_avg = Iout / 2 (per diode)
-    # I_sec_pk = I_sec_avg * pi = (Iout * pi) / 2
     Id_peak = (Iout * np.pi) / 2
-    Id_rms = Id_peak / 2 # Half-sine RMS is Peak/2
+    Id_rms = Id_peak / 2 
     
     # Primary Switch Currents
     Iq_peak = Ilr_peak
@@ -222,6 +231,7 @@ def calculate_stress_full(
         "Ilr_rms": Ilr_rms,
         "Ilr_peak": Ilr_peak,
         "Vcr_peak": Vcr_peak,
+        "Vcr_rms": Vcr_rms, # Added for completeness
         "Iq_rms": Iq_rms,
         "Iq_peak": Iq_peak,
         "Id_rms": Id_rms,

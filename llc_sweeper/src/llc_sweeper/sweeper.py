@@ -27,17 +27,17 @@ def solve_fN(
     # Smart Range Selection
     # If Gain < 1: Operation is usually above resonance (Region 2)
     # If Gain > 1: Operation is usually below resonance (Region 1)
-    if abs(target_gain - 1.0) < 0.001:
+    if abs(target_gain - 1.0) < 0.01: # Relaxed tolerance for "at resonance"
         return 1.0
         
     if target_gain < 1.0:
         # Above resonance
-        r_min = max(1.001, SearchRange[0])
-        r_max = max(2.2, SearchRange[1]) # Reasonable upper bound
+        r_min = max(1.000001, SearchRange[0])
+        r_max = max(2.5, SearchRange[1]) # Reasonable upper bound
     else:
         # Below resonance (Boost)
         r_min = max(0.4, SearchRange[0])
-        r_max = min(0.999, SearchRange[1])
+        r_max = min(0.999999, SearchRange[1])
         
     # Attempt Brentq
     try:
@@ -157,32 +157,36 @@ def sweep_design(specs: LLCSpecs) -> List[SimulationResult]:
                 
                 # Result Object
                 # --- Frequency Span Check (New Feature) ---
+                warnings_list = []
                 # A) fsw_min_corner at (Vin_min, 100% Load)
-                G_req_min = specs.Vout * n_used / specs.Vin_min
+                G_req_min = required_gain(specs.Vin_min, specs.Vout, n_used)
                 fN_min = solve_fN(G_req_min, Ln_real, Qe_real)
                 
                 # B) fsw_max_corner at (Vin_max, 20% Load)
                 # Qe_light = Qe_real * 0.2 (R_load increases x5 -> Q decreases x5)
                 # Note: Q = sqrt(Lr/Cr)/R.  R->5R => Q->Q/5 => 0.2*Q. Correct.
                 Qe_light = Qe_real * 0.2
-                G_req_max = specs.Vout * n_used / specs.Vin_max
+                G_req_max = required_gain(specs.Vin_max, specs.Vout, n_used)
                 fN_max = solve_fN(G_req_max, Ln_real, Qe_light)
                 
                 if fN_min is None or fN_max is None:
-                    continue # Valid design must be solvable at corners
-                    
-                fsw_min_val = fN_min * fR_real
-                fsw_max_val = fN_max * fR_real
-                if fsw_min_val < 1e-9: fsw_min_val = 1.0 # Protect DivZero
-                
-                span_ratio = fsw_max_val / fsw_min_val
+                    # Soft Fail: Cannot satisfy full range
+                    span_ratio = 5.0 # Max penalty
+                    fsw_min_val = fsw # Placeholder
+                    fsw_max_val = fsw # Placeholder
+                    warnings_list.append("Corner Unsolvable (Gain Limit)")
+                else:
+                    fsw_min_val = fN_min * fR_real
+                    fsw_max_val = fN_max * fR_real
+                    if fsw_min_val < 1e-9: fsw_min_val = 1.0 
+                    span_ratio = fsw_max_val / fsw_min_val
                 
                 # Penalty Rule
                 SPAN_RATIO_ALLOWED = 1.6
                 w_span = 0.6
+                # If soft fail (5.0), penalty will be large (5.0 - 1.6)*0.6 ~= 2.0
                 span_penalty = w_span * max(0, span_ratio - SPAN_RATIO_ALLOWED)
                 
-                warnings_list = []
                 if span_ratio > 2.0:
                     warnings_list.append(f"High fsw span ({span_ratio:.1f}x)")
                 

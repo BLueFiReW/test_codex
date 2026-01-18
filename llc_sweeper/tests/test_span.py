@@ -24,6 +24,7 @@ def test_span_penalty_calculation():
     
     res_wide = results_wide[0]
     print(f"Wide Span Ratio: {res_wide.fsw_span_ratio:.2f}")
+    if res_wide.warnings: print(f"Wide Warnings: {res_wide.warnings}")
     
     assert res_wide.fsw_span_ratio > 1.0, f"Span ratio {res_wide.fsw_span_ratio} should be > 1.0"
     
@@ -44,8 +45,9 @@ def test_span_penalty_calculation():
     
     res_narrow = results_narrow[0]
     print(f"Narrow Span Ratio: {res_narrow.fsw_span_ratio:.2f}")
+    if res_narrow.warnings: print(f"Narrow Warnings: {res_narrow.warnings}")
     
-    assert res_wide.fsw_span_ratio > res_narrow.fsw_span_ratio, "Wide span should be greater than narrow span"
+    assert res_wide.fsw_span_ratio > res_narrow.fsw_span_ratio, f"Wide ({res_wide.fsw_span_ratio:.2f}) not > Narrow ({res_narrow.fsw_span_ratio:.2f})"
     
     # Check that fsw_max_corner (Light Load, High Vin) is indeed high
     print(f"Corner check: Min {res_wide.fsw_min_corner/1e3:.1f}k, Max {res_wide.fsw_max_corner/1e3:.1f}k")

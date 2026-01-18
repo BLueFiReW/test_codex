@@ -117,6 +117,7 @@ if run_btn:
             
             selected_cand = None
             
+            for i, (col, res) in enumerate(zip(cols, top_candidates)):
                 t = res.tank
                 warn_html = ""
                 if res.warnings:
